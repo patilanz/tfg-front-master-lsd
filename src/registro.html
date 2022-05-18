@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <link rel="icon" type="image/svg+xml" href="../favicon.svg"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Registro</title>
+  <link rel="stylesheet" href="../style.css">
+  <script src="config.js"></script>
+  <style>
+      input:checked ~ .radio {
+          color: white;
+          background-color: green;
+      }
+  </style>
+
+
+  <script>
+		const comprobarTipo = target => {
+			if (target.getAttribute('id') === 'conductor') {
+				document.querySelector('#num_carnet_container').style.display = 'block';
+			} else {
+				document.querySelector('#num_carnet_container').style.display = 'none';
+			}
+		}
+		const registro = async e => {
+			e.preventDefault();
+			let errorDiv = document.querySelector('#errores');
+
+
+			const formData = new FormData(document.querySelector('#formulario'));
+
+			console.log(formData);
+
+			var data = {};
+			formData.forEach((value, key) => data[key] = value);
+
+			let url = `${baseURL}/`;
+			if (data.type === 'conductor') {
+				url += 'conductor_registro';
+			} else {
+				url += 'cliente_registro'
+			}
+
+			data.telefono += '(+34)'
+
+
+
+			try {
+
+				const rawResponse = await fetch(url, {
+					method: 'POST',
+					headers: {
+						'Accept': 'application/json',
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify(data)
+				});
+				const content = await rawResponse.json();
+				console.log(content);
+
+				if (content.error) {
+					errorDiv.innerHTML = content.message;
+				}
+
+			} catch (error) {
+				console.log(error);
+
+			}
+			return false;
+		}
+
+  </script>
+
+</head>
+
+
+<body>
+
+<div class="w-full text-center flex flex-wrap items-center">
+  <div class="w-full"><h1 class="text-2xl mt-10 font-bold">Registro</h1></div>
+  <div class="m-auto"><img src="images/logo.png" alt=""></div>
+</div>
+<div class="w-full">
+
+
+  <form class="bg-white shadow-md rounded px-10 pt-6 pb-8 mx-10 mb-4" id="formulario" onsubmit="return registro(event)">
+    <div class="w-full flex">
+      <div class="mr-2">
+        <label class="block text-gray-700 text-sm font-bold mb-2" for="nombre">
+          Nombre
+        </label>
+        <input placeholder="Nombre" name="nombre" id="nombre"
+               class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+               type="text">
+      </div>
+      <div>
+        <label class="block text-gray-700 text-sm font-bold mb-2" for="apellidos">
+          Apellidos
+        </label>
+        <input placeholder="Apellidos" name="apellidos" id="apellidos"
+               class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+               type="text">
+      </div>
+    </div>
+
+    <div class="my-5">
+      <label class="block text-gray-700 text-sm font-bold mb-2" for="dni">
+        DNI
+      </label>
+      <input placeholder="DNI" id="dni" name="dni"
+             class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+             type="text">
+    </div>
+
+
+    <div class="mb-4">
+      <label class="block text-gray-700 text-sm font-bold mb-2" for="email">
+        Correo electrónico
+      </label>
+      <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+             id="email" name="email" type="text" placeholder="email">
+    </div>
+
+    <div class="mb-4">
+      <label class="block text-gray-700 text-sm font-bold mb-2" for="email">
+        Teléfono móvil
+      </label>
+      <input
+              class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              id="telefono" name="telefono" type="text" placeholder="666666666">
+    </div>
+
+
+    <div class="mb-6">
+      <label class="block text-gray-700 text-sm font-bold mb-2" for="contrasena">
+        Contraseña
+      </label>
+      <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"
+             id="contrasena" name="contrasena" type="password" placeholder="******************">
+    </div>
+
+    <div class="flex justify-center items-center my-5">
+      <div class="bg-gray-200 rounded-lg">
+        <div class="inline-flex rounded-lg">
+          <input onclick="comprobarTipo(this)" type="radio" name="type" id="conductor" value="conductor" checked
+                 hidden/>
+          <label for="conductor"
+                 class="radio text-center self-center py-2 px-4 rounded-lg cursor-pointer hover:opacity-75">Conductor</label>
+        </div>
+        <div class="inline-flex rounded-lg">
+          <input onclick="comprobarTipo(this)" type="radio" name="type" id="pasajero" value="pasajero" hidden/>
+          <label for="pasajero"
+                 class="radio text-center self-center py-2 px-4 rounded-lg cursor-pointer hover:opacity-75">Pasajero</label>
+        </div>
+      </div>
+    </div>
+
+    <div id="num_carnet_container" class="mb-5" style="display: block">
+      <label class="block text-gray-700 text-sm font-bold mb-2" for="num_carnet">
+        Número de carnet
+      </label>
+      <input placeholder="Número de carnet" name="num_carnet" id="num_carnet"
+             class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+             type="text">
+    </div>
+
+
+    <div class="flex items-center justify-between">
+      <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+              type="submit">
+        Registro
+      </button>
+      <a class="inline-block align-baseline font-bold text-sm text-blue-500 hover:text-blue-800" href="login.html">
+        ¿Ya tienes cuenta? Entrar
+      </a>
+    </div>
+    <div id="errores">asd</div>
+  </form>
+</div>
+<script type="module" src="/main.js"></script>
+</body>
+</html>
