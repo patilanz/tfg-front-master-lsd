@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <link rel="stylesheet" href="../style.css">
+  <script src="js/auth.js"></script>
+  <script src="config.js"></script>
+
+  <title>Easy Drive</title>
+
+  <script>
+
+    const pedir = async () => {
+			const rawResponse = await fetch(`${baseURL}/${getUserType()}/peticion_codigo_telefono`, {
+				method: 'POST',
+				headers: {
+					'Accept': 'application/json',
+					'Authorization':"Bearer " + getToken()
+				}
+			});
+			const content = await rawResponse.json();
+    }
+		//pedir();
+
+    const continuar = async e => {
+			e.preventDefault();
+			let codigo = document.querySelector('#codigo').value;
+
+
+			const rawResponse = await fetch(`${baseURL}/${getUserType()}/activar_telefono` + encodeURIComponent(address), {
+				method: 'POST',
+				headers: {
+					'Accept': 'application/json',
+					'Content-Type': 'application/json',
+					'Authorization':"Bearer " + getToken()
+				},
+        body: JSON.stringify({codigo})
+			});
+			const content = await rawResponse.json();
+
+			if(content.error)document.querySelector('#errores').innerText = content.error;
+			window.location.href = '/';
+			return false;
+    }
+  </script>
+</head>
+<body>
+<div class="w-full text-center flex flex-wrap items-center">
+  <div class="w-full"><h1 class="text-2xl mt-10 font-bold">Registro</h1></div>
+  <div class="m-auto"><img src="images/logo.png" alt=""></div>
+</div>
+
+<div class="w-full">
+
+
+  <form class="bg-white shadow-md rounded px-10 pt-6 pb-8 mx-10 mb-4" id="formulario" onsubmit="return continuar(event)">
+    <div class="my-5">
+      Le hemos enviado un código al télefono. Por favor introduzca lo.
+    </div>
+    <div class="mr-2">
+      <label class="block text-gray-700 text-sm font-bold mb-2" for="codigo">
+        Código
+      </label>
+      <input placeholder="Código" name="codigo" id="codigo"
+             class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+             type="text" maxlength="5">
+    </div>
+
+
+    <div class="flex items-center justify-between mt-5">
+      <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+              type="submit">
+        Continuar
+      </button>
+    </div>
+
+
+    <div id="errores"></div>
+  </form>
+</div>
+</body>
+</html>

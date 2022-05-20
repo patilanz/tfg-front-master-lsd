@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Easy Drive</title>
+  <script src='https://api.mapbox.com/mapbox-gl-js/v2.8.2/mapbox-gl.js'></script>
+  <link href='https://api.mapbox.com/mapbox-gl-js/v2.8.2/mapbox-gl.css' rel='stylesheet'/>
+
+  <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="css/direccion.css">
+  <link rel="stylesheet" href="css/mapa.css">
+  <script src="config.js"></script>
+  <script src="js/direccion.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/auth.js"></script>
+</head>
+<body>
+<div id='map' style='width: 400px; height: 600px;'></div>
+<div id="mapaDireccionContenedorOrigen"></div>
+<div id="mapaDireccionContenedor" class="mt-5"></div>
+
+<div class="centroModal" id="infoViaje" style="height: 200px">
+  <div class="text-bold">Conductor: <span id="conductor_nombre"></span></div>
+  <div class="text-bold">Precio: <span id="precio"></span></div>
+  <div class="text-bold">Duración estimada: <span id="duracion"></span></div>
+
+  <div class="w-full flex flex-nowrap items-center mt-10">
+    <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold mr-5 py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+            type="button" onclick="aceptarViaje()">
+      Aceptar
+    </button>
+
+    <button class="bg-red-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+            type="button" onclick="cancelarViaje()">
+      Cancelar
+    </button>
+  </div>
+</div>
+
+<div class="centroModal" id="infoEsperarAceptarConductor" style="height: 150px">Esperando al conductor...</div>
+
+
+<script>
+	var origen = [-3.64884, 40.395499];
+	var destino = [-3.641673, 40.392761];
+	let id_viaje = false;
+  //let origen = false;
+	//let destino = false;
+
+
+  let conductor = false;
+	let origenMarker = false;
+	let destinoMarker = false;
+	let cochesMarkers = [];
+	let coordenadasRuta = [];
+
+	let comprobarViajeAceptadoInterval = false;
+
+	async function comprobarViajeAceptado(){
+		const rawResponse = await fetch(`${baseURL}/viaje/aceptado?id_viaje=${id_viaje}`, {
+			method: 'GET',
+			headers: {
+				'Accept': 'application/json',
+				'Authorization':"Bearer " + getToken()
+			}
+		});
+		const content = await rawResponse.json();
+
+		if(content.success){
+			clearInterval(comprobarViajeAceptadoInterval);
+			alert('viaje aceptado');
+			// empezar viaje
+    }
+
+  }
+
+	async function aceptarViaje(){
+		const rawResponse = await fetch(`${baseURL}/viaje`, {
+			method: 'POST',
+			headers: {
+				'Accept': 'application/json',
+				'Content-Type': 'application/json',
+				'Authorization':"Bearer " + getToken()
+			},
+			body: JSON.stringify({
+        id_conductor: conductor.id_conductor,
+        from: {
+					lat: origen[1],
+          lng: origen[0]
+        },
+        to: {
+					lat: destino[1],
+          lng: destino[0]
+        }
+      })
+		});
+		const content = await rawResponse.json();
+    if(content.success){
+			document.querySelector('#infoViaje').style.display = 'none';
+			document.querySelector('#infoEsperarAceptarConductor').style.display = 'block';
+
+			comprobarViajeAceptadoInterval = setInterval(comprobarViajeAceptado, 1000);
+    }
+  }
+
+	function cancelarViaje(){
+		origen = false;
+		destino = false;
+
+		origenMarker.remove();
+		origenMarker = false;
+
+		destinoMarker.remove();
+		destino = false;
+
+		document.querySelector('#infoViaje').style.display = 'none';
+  }
+
+
+	async function crearRuta() {
+		if (!origen || !destino) return;
+		let respuestaRuta = await getAddresses(origen, destino);
+		conductor = await getConductor();
+
+		map.addSource('LineString', {
+			type: 'geojson',
+			data: {
+				type: 'FeatureCollection',
+				features: [
+					{
+						type: 'Feature',
+						'geometry': respuestaRuta.geometry
+
+					}
+				]
+			}
+		});
+
+		map.addLayer({
+			id: 'LineString',
+			type: 'line',
+			source: 'LineString',
+			layout: {
+				'line-join': 'round',
+				'line-cap': 'round'
+			},
+			paint: {
+				'line-color': '#7b39ee',
+				'line-width': 6
+			}
+		});
+
+    document.querySelector('#conductor_nombre').innerText = conductor.nombre + ' ' + conductor.apellidos;
+		document.querySelector('#precio').innerText = respuestaRuta.price/100 + ' euros';
+		document.querySelector('#duracion').innerText = Math.floor(respuestaRuta.duration) + ' minutos';
+
+
+    document.querySelector('#infoViaje').style.display = 'block';
+
+	}
+
+
+
+	async function cargarCoches() {
+		/*
+      const rawResponse = await fetch(`${baseURL}/conductor/ubicacion`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Authorization':"Bearer " + getToken()
+        }
+      });
+      const content = await rawResponse.json();
+    */
+
+		let coordenadas = [
+			[40.386255, -3.646221],
+			[40.397369, -3.641411],
+			[40.393675, -3.660512]
+		];
+
+		for (let i = 0; i < coordenadas.length; i++) {
+			let center = [coordenadas[i][1], coordenadas[i][0]];
+			const el = document.createElement('div');
+			el.className = 'image';
+			el.style.backgroundImage = 'url(https://cdn-icons-png.flaticon.com/512/3202/3202926.png)';
+			el.style.width = '40px';
+			el.style.height = '40px';
+			el.style.backgroundSize = '100%';
+
+
+			let marker = new mapboxgl.Marker(el)
+				.setLngLat(center)
+				.addTo(map);
+
+			cochesMarkers.push(marker);
+		}
+
+
+	}
+
+	async function start() {
+		let location = await getLocation();
+		console.log(location);
+
+		let mapContainer = document.querySelector('#map');
+		mapContainer.style.width = window.innerWidth + 'px';
+
+		generarDireccion(document.querySelector('#mapaDireccionContenedorOrigen'), "Origen", "address_origen", d => {
+			direccion = d;
+			console.log(d);
+			origen = [d.coordenadas[0], d.coordenadas[1]];
+			if (!origenMarker) {
+				origenMarker = new mapboxgl.Marker();
+				origenMarker.setLngLat(origen);
+				origenMarker.addTo(map);
+			} else {
+				origenMarker.setLngLat(origen);
+			}
+
+			comprobarZoom();
+			crearRuta();
+
+		});
+
+
+		generarDireccion(document.querySelector('#mapaDireccionContenedor'), "Destino", "address_destino", d => {
+			direccion = d;
+			console.log(d);
+			destino = [d.coordenadas[0], d.coordenadas[1]];
+			if (!destinoMarker) {
+				destinoMarker = new mapboxgl.Marker();
+				destinoMarker.setLngLat(destino);
+				destinoMarker.addTo(map);
+			} else {
+				destinoMarker.setLngLat(destino);
+			}
+
+			comprobarZoom();
+			crearRuta();
+
+		});
+
+
+		mapboxgl.accessToken = 'pk.eyJ1IjoibHl1Ym9zZCIsImEiOiJjbDJkaHZhdGQwOGtpM2xtYjJvem13eW16In0.MGGU6F3qmuLK2TSqfShavQ';
+		map = new mapboxgl.Map({
+			container: 'map', // container ID
+			style: 'mapbox://styles/mapbox/navigation-day-v1', // style URL
+			center: [location.coords.longitude, location.coords.latitude], // starting position [lng, lat]
+			zoom: 9 // starting zoom
+		});
+
+
+		const geolocate = new mapboxgl.GeolocateControl({
+			positionOptions: {
+				enableHighAccuracy: true
+			},
+			trackUserLocation: true
+		});
+// Add the control to the map.
+		map.addControl(geolocate);
+		map.on('load', () => {
+			//geolocate.trigger();
+			cargarCoches();
+			crearRuta();
+			comprobarZoom();
+		});
+
+	}
+
+	start();
+
+
+</script>
+</body>
+</html>

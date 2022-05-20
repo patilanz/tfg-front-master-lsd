@@ -1,0 +1,17 @@
+.direccion_contenedor{
+    position: relative;
+}
+.direccion_elementos{
+    position: absolute;
+    background: #fff;
+    box-shadow: 0 0 3px #ccc;
+    border: 1px solid #ccc;
+}
+.direccion_elemento{
+    padding: 3px;
+    cursor: pointer;
+    border-bottom: 1px solid #ccc;
+}
+.direccion_elemento:hover{
+    background: #F5F5F5FF;
+}

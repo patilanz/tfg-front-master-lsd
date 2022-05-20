@@ -6,7 +6,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Registro</title>
   <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="./css/direccion.css">
   <script src="config.js"></script>
+  <script src="js/direccion.js"></script>
+  <script src="js/auth.js"></script>
   <style>
       input:checked ~ .radio {
           color: white;
@@ -16,6 +19,7 @@
 
 
   <script>
+    let direccion = false;
 		const comprobarTipo = target => {
 			if (target.getAttribute('id') === 'conductor') {
 				document.querySelector('#num_carnet_container').style.display = 'block';
@@ -42,9 +46,14 @@
 				url += 'cliente_registro'
 			}
 
-			data.telefono += '(+34)'
+			data.telefono = '(+34)' + data.telefono;
+			data.dni = data.dni.toUpperCase();
 
-
+			data.direccion = {
+				address: direccion.texto,
+        lat: direccion.coordenadas[0],
+        lng: direccion.coordenadas[1]
+      }
 
 			try {
 
@@ -60,12 +69,16 @@
 				console.log(content);
 
 				if (content.error) {
-					errorDiv.innerHTML = content.message;
+					errorDiv.innerHTML = content.error;
+					return;
 				}
+        login(content.token, data.type);
+
+				window.location.href = 'codigoTelefono.html';
 
 			} catch (error) {
 				console.log(error);
-
+        errorDiv.innerText = error?.message;
 			}
 			return false;
 		}
@@ -113,6 +126,8 @@
              type="text">
     </div>
 
+    <div class="my-5" id="direccion_contenedor"></div>
+
 
     <div class="mb-4">
       <label class="block text-gray-700 text-sm font-bold mb-2" for="email">
@@ -149,7 +164,7 @@
                  class="radio text-center self-center py-2 px-4 rounded-lg cursor-pointer hover:opacity-75">Conductor</label>
         </div>
         <div class="inline-flex rounded-lg">
-          <input onclick="comprobarTipo(this)" type="radio" name="type" id="pasajero" value="pasajero" hidden/>
+          <input onclick="comprobarTipo(this)" type="radio" name="type" id="pasajero" value="cliente" hidden/>
           <label for="pasajero"
                  class="radio text-center self-center py-2 px-4 rounded-lg cursor-pointer hover:opacity-75">Pasajero</label>
         </div>
@@ -172,12 +187,18 @@
         Registro
       </button>
       <a class="inline-block align-baseline font-bold text-sm text-blue-500 hover:text-blue-800" href="login.html">
-        ¿Ya tienes cuenta? Entrar
+        ¿Ya tienes cuenta? Iniciar sesión
       </a>
     </div>
-    <div id="errores">asd</div>
+
+
+
+    <div id="errores"></div>
   </form>
 </div>
 <script type="module" src="/main.js"></script>
+<script>
+  generarDireccion(document.querySelector('#direccion_contenedor'), "Dirección casa", "address", d => direccion = d);
+</script>
 </body>
 </html>
