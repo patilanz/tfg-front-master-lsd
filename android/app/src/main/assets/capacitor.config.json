@@ -1,0 +1,6 @@
+{
+	"appId": "com.group9.easydrive",
+	"appName": "easydrive",
+	"webDir": "dist",
+	"bundledWebRuntime": false
+}

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8"/>
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Añadir vehiculo</title>
+    <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="./css/direccion.css">
+    <script src="config.js"></script>
+    <script src="js/direccion.js"></script>
+    <script src="js/auth.js"></script>
+    <style>
+        input:checked ~ .radio {
+            color: white;
+            background-color: green;
+        }
+    </style>
+
+
+    <script>
+
+      async function registarCoche() {
+        e.preventDefault();
+        let errorDiv = document.querySelector('#errores');
+
+
+        const formData = new FormData(document.querySelector('#formulario'));
+
+        console.log(formData);
+
+        var data = {};
+        formData.forEach((value, key) => data[key] = value);
+
+        let url = `${baseURL}/api/conductor/coche`;
+        try {
+
+          const rawResponse = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+              'Authorization':"Bearer " + getToken()
+
+            },
+            body: JSON.stringify(data)
+          });
+          const content = await rawResponse.json();
+          console.log(content);
+
+          if (content.error) {
+            errorDiv.innerHTML = content.error;
+            return;
+          }
+
+          window.location.href = '/';
+
+        } catch (error) {
+          console.log(error);
+          errorDiv.innerText = error?.message;
+        }
+        return false;
+      }
+    </script>
+
+</head>
+
+
+<body>
+
+<div class="w-full text-center flex flex-wrap items-center">
+    <div class="w-full"><h1 class="text-2xl mt-10 font-bold">Añadir vehiculo</h1></div>
+    <div class="m-auto"><img src="images/logo.png" alt=""></div>
+</div>
+<div class="w-full">
+
+
+    <form class="bg-white shadow-md rounded px-10 pt-6 pb-8 mx-10 mb-4" id="formulario"
+          onsubmit="return registarCoche(event)">
+        <div class="w-full flex">
+            <div class="mr-2">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="marca">
+                    Marca
+                </label>
+                <input placeholder="Marca" name="marca" id="marca"
+                       class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                       type="text">
+            </div>
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="modelo">
+                    Modelo
+                </label>
+                <input placeholder="Marca" name="modelo" id="modelo"
+                       class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                       type="text">
+            </div>
+        </div>
+
+        <div class="w-full flex mt-5">
+            <div class="mr-2">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="color">
+                    Color
+                </label>
+                <input placeholder="Color" name="color" id="color"
+                       class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                       type="text">
+            </div>
+                <div class="mr-2">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="ano">
+                        Año
+                    </label>
+                    <input placeholder="Ano" name="ano" id="ano"
+                           class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                           type="number">
+                </div>
+        </div>
+        <div>
+                <button class="bg-green-500 mt-5 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                        type="submit">
+                    Añadir vehiculo
+                </button>
+        </div>
+    </form>
+</div>
+
+</body>
+</html>
