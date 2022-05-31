@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="../style.css">
   <link rel="stylesheet" href="css/direccion.css">
   <link rel="stylesheet" href="css/mapa.css">
+  <link rel="stylesheet" href="css/menu.css">
   <script src="config.js"></script>
   <script src="js/direccion.js"></script>
   <script src="js/map.js"></script>
@@ -42,13 +43,20 @@
 
 <div class="centroModal" id="infoText" style="height: 150px">Esperando al conductor...</div>
 
+<div class="menu">
+  <div class="iconContainer"><img src="images/home.gif"/></div>
+  <div class="iconContainer"><img src="images/profile.gif"/></div>
+  <div class="iconContainer"><img src="images/contact.gif"/></div>
+</div>
+
+
 
 <script>
-	//var origen = [-3.64884, 40.395499];
-	//var destino = [-3.641673, 40.392761];
+	var origen = [-3.64884, 40.395499];
+	var destino = [-3.641673, 40.392761];
 	let id_viaje = false;
-  let origen = false;
-	let destino = false;
+  //let origen = false;
+	//let destino = false;
 
 
   let conductor = false;
@@ -60,7 +68,7 @@
 	let comprobarViajeAceptadoInterval = false;
 
 	async function comprobarViajeAceptado(){
-		const rawResponse = await fetch(`${baseURL}/viaje/aceptado?id_viaje=${id_viaje}`, {
+		const rawResponse = await fetch(`${baseURL}/viaje?id_viaje=${id_viaje}`, {
 			method: 'GET',
 			headers: {
 				'Accept': 'application/json',
@@ -69,7 +77,15 @@
 		});
 		const content = await rawResponse.json();
 
-		if(content.success){
+		// el conductor ha cancelado el viaje
+		if(!content?.viaje){
+			clearInterval(comprobarViajeAceptadoInterval);
+      alert('El conductor ha cancelado el viaje. Buscando otro conductor...');
+			document.querySelector('#infoText').style.display = 'none';
+			onNuevaDreccion();
+    }
+
+		if(content?.viaje?.aceptado){
 			clearInterval(comprobarViajeAceptadoInterval);
 			alert('viaje aceptado');
 			let ubicacionActual = await getLocation();
@@ -137,50 +153,23 @@
 		if (!a || !b) return;
 		let respuestaRuta = await getAddresses(a, b);
 
-		try {
-			map.removeLayer('LineString');
-			map.removeSource('LineString');
-		}catch(_){}
-
-		map.addSource('LineString', {
-			type: 'geojson',
-			data: {
-				type: 'FeatureCollection',
-				features: [
-					{
-						type: 'Feature',
-						'geometry': respuestaRuta.geometry
-
-					}
-				]
-			}
-		});
-
-		map.addLayer({
-			id: 'LineString',
-			type: 'line',
-			source: 'LineString',
-			layout: {
-				'line-join': 'round',
-				'line-cap': 'round'
-			},
-			paint: {
-				'line-color': '#7b39ee',
-				'line-width': 6
-			}
-		});
+		console.log(respuestaRuta.geometry);
+		pintarRuta(respuestaRuta.geometry);
 
 		return respuestaRuta;
-
-
 	}
+
+	const crearTiempo = (tiempo) => {
+		return Math.floor(tiempo) + ' segundos'
+  }
+
 
 	async function mostrarInfoViaje(ruta){
 		conductor = await getConductor();
 
 		document.querySelector('#conductor_nombre').innerText = conductor.nombre + ' ' + conductor.apellidos;
 		document.querySelector('#precio').innerText = ruta.price/100 + ' euros';
-		document.querySelector('#duracion').innerText = Math.floor(ruta.duration) + ' minutos';
+		document.querySelector('#duracion').innerText = crearTiempo(ruta.duration);
 
 
 		document.querySelector('#infoViaje').style.display = 'block';

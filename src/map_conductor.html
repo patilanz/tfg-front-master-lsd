@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Easy Drive</title>
+  <script src='https://api.mapbox.com/mapbox-gl-js/v2.8.2/mapbox-gl.js'></script>
+  <link href='https://api.mapbox.com/mapbox-gl-js/v2.8.2/mapbox-gl.css' rel='stylesheet'/>
+
+  <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="css/direccion.css">
+  <link rel="stylesheet" href="css/mapa.css">
+  <link rel="stylesheet" href="css/menu.css">
+  <script src="config.js"></script>
+  <script src="js/direccion.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/auth.js"></script>
+</head>
+<body>
+<div id='map' style='width: 400px; height: 600px;'></div>
+
+<div class="centroModal" id="infoViaje" style="height: 200px">
+  <div class="text-bold">Cliente: <span id="cliente_nombre"></span></div>
+  <div class="text-bold">Precio: <span id="precio"></span></div>
+  <div class="text-bold">Duración estimada: <span id="duracion"></span></div>
+
+  <div class="w-full flex flex-nowrap items-center mt-10">
+    <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold mr-5 py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+            type="button" onclick="aceptarViaje()">
+      Aceptar
+    </button>
+
+    <button class="bg-red-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+            type="button" onclick="cancelarViaje()">
+      Cancelar
+    </button>
+  </div>
+</div>
+
+<div class="abajoModal" id="recogerCliente" style="height: 100px">
+  <div>Recoger al cliente</div>
+  <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold mr-5 py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+          type="button" onclick="recogerCliente()">
+    Cliente subido
+  </button>
+</div>
+<div class="abajoModal" id="terminarViaje" style="height: 100px">
+  <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold mr-5 py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+          type="button" onclick="recogerCliente()">
+    El cliente ha llegado a su destino
+  </button>
+</div>
+
+<div class="centroModal" id="infoText" style="height: 150px">Esperando al conductor...</div>
+
+<div class="menu">
+  <div class="iconContainer"><img src="images/home.gif"/></div>
+  <div class="iconContainer"><img src="images/profile.gif"/></div>
+  <div class="iconContainer"><img src="images/contact.gif"/></div>
+</div>
+
+
+<script>
+	//var origen = [-3.64884, 40.395499];
+	//var destino = [-3.641673, 40.392761];
+	let viaje = false;
+	let origen = false;
+	let destino = false;
+
+
+	let conductor = false;
+	let origenMarker = false;
+	let destinoMarker = false;
+	let cocheMarker = false;
+	let coordenadasRuta = [];
+
+	let comprobarViajeInterval = false;
+	let mostrarCocheInterval = false;
+
+	async function recogerCliente() {
+
+	}
+
+	async function comprobarViaje() {
+		let datos = await getCliente();
+
+		console.log(datos);
+
+
+		if (datos.cliente) {
+			clearInterval(comprobarViajeInterval);
+
+			viaje = {
+				id_viaje: datos.cliente.id_viaje,
+				ruta: {
+					coordinates: datos.coordenadas.map(c => ([c.x, c.y])),
+					type: 'LineString'
+				},
+				duration: datos.duracion,
+				price: datos.precio
+			}
+
+			origen = datos.coordenadas[0];
+			destino = datos.coordenadas[datos.coordenadas.length - 1];
+
+			origen = [origen.x, origen.y];
+			destino = [destino.x, destino.y];
+
+
+			// empezar viaje
+			mostrarInfoViaje(datos.cliente);
+
+			pintarRuta(viaje.ruta, origen, destino);
+			comprobarZoom();
+		}
+
+	}
+
+	function ocultarModales() {
+		document.querySelector('#infoViaje').style.display = 'none';
+		document.querySelector('#infoText').style.display = 'none';
+		document.querySelector('#recogerCliente').style.display = 'none';
+
+
+	}
+
+	async function aceptarViaje() {
+		const rawResponse = await fetch(`${baseURL}/viaje/aceptar`, {
+			method: 'PUT',
+			headers: {
+				'Accept': 'application/json',
+				'Content-Type': 'application/json',
+				'Authorization': "Bearer " + getToken()
+			},
+			body: JSON.stringify({
+				id_viaje: viaje?.id_viaje
+			})
+		});
+		const content = await rawResponse.json();
+
+
+		if (content.success) {
+
+			let location = await getLocation();
+			destino = origen;
+			origen = [location.coords.longitude, location.coords.latitude]
+
+			let respuestaRuta = await getAddresses(origen, destino);
+			pintarRuta(respuestaRuta.geometry);
+
+			ocultarModales();
+			document.querySelector('#recogerCliente').style.display = 'block';
+			if (destinoMarker) destinoMarker.remove();
+
+			//if(comprobarViajeInterval)clearInterval(comprobarViajeInterval);
+			//comprobarViajeInterval = setInterval(comprobarViaje, 1000);
+		}
+	}
+
+	async function cancelarViaje() {
+		origen = false;
+		destino = false;
+
+		if (origenMarker) origenMarker.remove();
+		origenMarker = false;
+
+		if (destinoMarker) destinoMarker.remove();
+		destino = false;
+
+		if (viaje) {
+			await fetch(`${baseURL}/viaje`, {
+				method: 'DELETE',
+				headers: {
+					'Accept': 'application/json',
+					'Content-Type': 'application/json',
+					'Authorization': "Bearer " + getToken()
+				},
+				body: JSON.stringify({id_viaje: viaje.id_viaje})
+			});
+
+			viaje = false;
+			comprobarViajeInterval = setInterval(comprobarViaje, 1000);
+		}
+
+
+		document.querySelector('#infoViaje').style.display = 'none';
+	}
+
+
+	async function crearRuta(a, b) {
+		a = a || origen;
+		b = b || destino;
+		if (!a || !b) return;
+		let respuestaRuta = await getAddresses(a, b);
+
+		pintarRuta(respuestaRuta.geometry);
+
+		return respuestaRuta;
+	}
+
+	const crearTiempo = (tiempo) => {
+		return Math.floor(tiempo) + ' segundos'
+	}
+
+
+	async function mostrarInfoViaje(datos) {
+
+		document.querySelector('#cliente_nombre').innerText = datos.nombre + ' ' + datos.apellidos;
+		document.querySelector('#precio').innerText = datos.precio / 100 + ' euros';
+		document.querySelector('#duracion').innerText = crearTiempo(datos.duracion);
+
+
+		document.querySelector('#infoViaje').style.display = 'block';
+	}
+
+
+	async function onNuevaDreccion() {
+		comprobarZoom();
+		if (!origen || !destino) return;
+		let ruta = await crearRuta();
+		mostrarInfoViaje(ruta);
+	}
+
+	async function mostrarCoche() {
+		let location = await getLocation();
+
+		let center = [location.coords.longitude, location.coords.latitude];
+
+
+		if (!cocheMarker) {
+			const el = document.createElement('div');
+			el.className = 'image';
+			el.style.backgroundImage = 'url(https://cdn-icons-png.flaticon.com/512/3202/3202926.png)';
+			el.style.width = '40px';
+			el.style.height = '40px';
+			el.style.backgroundSize = '100%';
+
+			cocheMarker = new mapboxgl.Marker(el)
+				.setLngLat(center)
+				.addTo(map);
+		} else {
+			cocheMarker.setLngLat(center);
+		}
+	}
+
+	async function start() {
+		let location = await getLocation();
+		console.log(location);
+
+		let mapContainer = document.querySelector('#map');
+		mapContainer.style.width = window.innerWidth + 'px';
+
+
+		mapboxgl.accessToken = mapboxAccessToken;
+		map = new mapboxgl.Map({
+			container: 'map', // container ID
+			style: 'mapbox://styles/mapbox/navigation-day-v1', // style URL
+			center: [location.coords.longitude, location.coords.latitude], // starting position [lng, lat]
+			zoom: 9 // starting zoom
+		});
+
+
+		const geolocate = new mapboxgl.GeolocateControl({
+			positionOptions: {
+				enableHighAccuracy: true
+			},
+			trackUserLocation: true
+		});
+// Add the control to the map.
+		map.addControl(geolocate);
+		map.on('load', () => {
+			//geolocate.trigger();
+			onNuevaDreccion();
+			comprobarViajeInterval = setInterval(comprobarViaje, 1000);
+			mostrarCocheInterval = setInterval(mostrarCoche, 1000);
+		});
+
+	}
+
+	start();
+
+
+</script>
+</body>
+</html>

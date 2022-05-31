@@ -1,6 +1,6 @@
 #mapaDireccionContenedor, #mapaDireccionContenedorOrigen{
     margin: 10px 10px;
 }
-#infoViaje, #infoText{
+#infoViaje, #infoText, #recogerCliente, #terminarViaje{
     display: none;
 }

@@ -6,12 +6,9 @@ body{
     margin: 0;
 }
 
-.centroModal{
+.centroModal, .abajoModal{
     position: absolute;
-    top: 30%;
-    left: 50%;
     transform: translate(-50%, -50%);
-
     width: 400px;
     height: 400px;
     background: #fff;
@@ -19,4 +16,14 @@ body{
     border-radius: 8px;
     padding: 10px;
     box-shadow: 0 0 3px #ccc;
+}
+
+.centroModal{
+    top: 30%;
+    left: 50%;
+}
+
+.abajoModal{
+    bottom: 20%;
+    left: 50%;
 }

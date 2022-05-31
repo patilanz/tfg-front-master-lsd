@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Vite App</title>
   <link rel="stylesheet" href="/src/index.css">
-  <script src="/src/js/auth.js" type="module"></script>
+  <script src="/src/js/auth.js" ></script>
 
   <link rel="stylesheet" href="/style.css">
 </head>
@@ -15,7 +15,11 @@
   if(!isLogged()){
 		window.location.href = 'src/login.html';
   }else{
-		window.location.href = 'src/map.html';
+		if(getUserType() === 'conductor'){
+			window.location.href = 'src/map_conductor.html';
+    }else{
+			window.location.href = 'src/map.html';
+    }
   }
 </script>
 <script type="module" src="/main.js"></script>
