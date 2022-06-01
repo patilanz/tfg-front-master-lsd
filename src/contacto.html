@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8"/>
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Contacto</title>
+    <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="./css/direccion.css">
+    <script src="config.js"></script>
+    <script src="js/direccion.js"></script>
+    <script src="js/auth.js"></script>
+    <link rel="stylesheet" href="css/menu.css">
+    <style>
+        input:checked ~ .radio {
+            color: white;
+            background-color: green;
+        }
+    </style>
+
+
+    <script>
+
+      async function contacto(e) {
+        e.preventDefault();
+        let errorDiv = document.querySelector('#errores');
+
+
+        const formData = new FormData(document.querySelector('#formulario'));
+
+        console.log(formData);
+
+        var data = {};
+        formData.forEach((value, key) => data[key] = value);
+
+        if (data.mensaje.length === 0) {
+          errorDiv.innerHTML = 'El mensaje esta vacio.'
+          return;
+        }
+
+        let url = `${baseURL}/contacto`;
+        try {
+
+          const rawResponse = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+              'Authorization': "Bearer " + getToken()
+            },
+            body: JSON.stringify(data)
+          });
+          const content = await rawResponse.json();
+          console.log(content);
+
+          if (content.error) {
+            errorDiv.innerHTML = content.error;
+            return;
+          }
+
+          alert("Su mensaje ha sido enviado. En breve nuestro equipo se pondra en contacto contigo. Gracias por utilizar EasyDrive.")
+          window.location.href = '/';
+
+        } catch (error) {
+          console.log(error);
+          errorDiv.innerText = error?.message;
+        }
+        return false;
+
+      }
+    </script>
+
+</head>
+
+
+<body>
+
+<div class="w-full text-center flex flex-wrap items-center">
+    <div class="w-full"><h1 class="text-2xl mt-10 font-bold">Estamos aqui para ayudarte!</h1></div>
+    <div class="m-auto"><img src="images/logo.png" alt=""></div>
+</div>
+<div class="w-full">
+
+
+    <form class="bg-white shadow-md rounded px-10 pt-6 pb-8 mx-10 mb-4" id="formulario"
+          onsubmit="return contacto(event)">
+        <div class="mr-2">
+            <label class="block text-gray-700 text-sm font-bold mb-2" for="asunto">
+                Asunto
+            </label>
+            <input placeholder="Asunto" name="asunto" id="asunto"
+                   class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                   type="text">
+        </div>
+
+        <div>
+
+            <label class="block text-gray-700 text-sm font-bold mt-3 mb-2" for="mensaje">
+                Mensaje
+            </label>
+            <textarea maxlength="1000" rows="5" placeholder="Mensaje" name="mensaje" id="mensaje"
+                      class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                      type="text"></textarea>
+        </div>
+
+        <div id="errores"></div>
+
+        <div class="my-5" id="direccion_contenedor"></div>
+
+
+        <div>
+            <button class="bg-green-500 mt-5 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                    type="submit">
+                Enviar Mensaje
+            </button>
+        </div>
+    </form>
+</div>
+<div class="menu" id="menu">
+    <div onclick="getUserType() === 'conductor' ? window.location.href = './map_conductor.html' : './map.html'" class="iconContainer"><img src="images/home.gif"/></div>
+    <div class="iconContainer" onclick="window.location.href = './editarPerfil.html'"><img src="images/profile.gif"/></div>
+    <div class="iconContainer" onclick="window.location.href = './contacto.html'"><img src="images/contact.gif"/></div>
+</div>
+
+</body>
+</html>

@@ -4,7 +4,7 @@
     <meta charset="UTF-8"/>
     <link rel="icon" type="image/svg+xml" href="../favicon.svg"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Añadir vehiculo</title>
+    <title>Añadir vehículo</title>
     <link rel="stylesheet" href="../style.css">
     <link rel="stylesheet" href="./css/direccion.css">
     <script src="config.js"></script>
@@ -20,7 +20,7 @@
 
     <script>
 
-      async function registarCoche() {
+      async function registarCoche(e) {
         e.preventDefault();
         let errorDiv = document.querySelector('#errores');
 
@@ -32,6 +32,22 @@
         var data = {};
         formData.forEach((value, key) => data[key] = value);
 
+        if(data.matricula.length !== 9  || !/^[A-Z0-9]+$/.test( data.matricula)){
+          errorDiv.innerHTML = 'La matricula es inccorecto!'
+          return;
+        }
+        if(data.ano.length !== 4 || data.ano < 2000){
+          errorDiv.innerHTML = 'El año del vehículo es inccorecto!'
+          return;
+        }
+        if(!/^[a-zA-Z ]+$/.test( data.marca)){
+          errorDiv.innerHTML = 'La marca del vehículo es inccorecto!'
+          return;
+        }
+        if(!/^[a-zA-Z0-9 ]+$/.test( data.modelo)){
+          errorDiv.innerHTML = 'El modelo del vehículo es inccorecto!'
+          return;
+        }
         let url = `${baseURL}/api/conductor/coche`;
         try {
 
@@ -69,7 +85,7 @@
 <body>
 
 <div class="w-full text-center flex flex-wrap items-center">
-    <div class="w-full"><h1 class="text-2xl mt-10 font-bold">Añadir vehiculo</h1></div>
+    <div class="w-full"><h1 class="text-2xl mt-10 font-bold">Añadir vehículo</h1></div>
     <div class="m-auto"><img src="images/logo.png" alt=""></div>
 </div>
 <div class="w-full">
@@ -114,12 +130,21 @@
                            type="number">
                 </div>
         </div>
+        <div class="mr-2">
+            <label class="block text-gray-700 text-sm font-bold mt-5 mb-2" for="matricula">
+                Matricula
+            </label>
+            <input placeholder="Matricula" name="matricula" id="matricula"
+                   class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                   type="text">
+        </div>
         <div>
                 <button class="bg-green-500 mt-5 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
                         type="submit">
-                    Añadir vehiculo
+                    Añadir vehículo
                 </button>
         </div>
+        <div id="errores"></div>
     </form>
 </div>
 

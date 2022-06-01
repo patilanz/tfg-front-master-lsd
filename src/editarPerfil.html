@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <link rel="icon" type="image/svg+xml" href="../favicon.svg"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Editar Perfil</title>
+  <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="./css/direccion.css">
+  <script src="config.js"></script>
+  <script src="js/direccion.js"></script>
+  <script src="js/auth.js"></script>
+  <link rel="stylesheet" href="css/menu.css">
+  <style>
+      input:checked ~ .radio {
+          color: white;
+          background-color: green;
+      }
+  </style>
+
+
+  <script>
+
+		async function editarPerfil(e) {
+			e.preventDefault();
+			let errorDiv = document.querySelector('#errores');
+			errorDiv.innerHTML = "";
+
+			const formData = new FormData(document.querySelector('#formulario'));
+			var data = {};
+			formData.forEach((value, key) => data[key] = value);
+
+			if (data.nombre.length < 2 || !/^[a-zA-Z ]+$/.test(data.nombre)) {
+				errorDiv.innerHTML = 'El nombre es invalido'
+				return;
+			}
+
+			if (data.apellidos.length < 2 || !/^[a-zA-Z ]+$/.test(data.apellidos)) {
+				errorDiv.innerHTML = 'El apellido es invalido'
+				return;
+			}
+
+			if (data.contrasena.length > 0 && !(/^(?=.*[a-z])(?=.*[0-9])\S{8,30}$/i).test(data.contrasena)) { // por lo menos 8 caracteres, 1 letra y 1 numero obligatorios
+				errorDiv.innerHTML = 'La contraseña debe incluir por lo menos 8 caracteres, 1 letra y 1 numero '
+				return;
+			}
+			if (data.dni.length !== 9 || !/^[A-Z0-9]+$/.test(data.dni)) {
+				errorDiv.innerHTML = 'El DNI es invalido'
+				return;
+			}
+
+
+			console.log(data);
+
+			let url = `${baseURL}/${getUserType()}`;
+			try {
+
+				const rawResponse = await fetch(url, {
+					method: 'PUT',
+					headers: {
+						'Accept': 'application/json',
+						'Content-Type': 'application/json',
+						'Authorization': "Bearer " + getToken()
+
+					},
+					body: JSON.stringify(data)
+				});
+				const content = await rawResponse.json();
+				console.log(content);
+
+				if (content.error) {
+					errorDiv.innerHTML = content.error;
+					return;
+				}
+
+				alert('Los datos han sido modificados con exito!')
+				window.location.href = '/';
+
+			} catch (error) {
+				console.log(error);
+				errorDiv.innerText = error?.message;
+			}
+			return false;
+		}
+  </script>
+
+</head>
+
+
+<body>
+
+<div class="w-full text-center flex flex-wrap items-center">
+  <div class="w-full"><h1 class="text-2xl mt-10 font-bold">Editar Perfil</h1></div>
+  <div class="m-auto"><img src="images/logo.png" alt=""></div>
+</div>
+<div class="w-full">
+
+
+  <form class="bg-white shadow-md rounded px-10 pt-6 pb-8 mx-10 mb-4" id="formulario"
+        onsubmit="return editarPerfil(event)">
+    <div class="w-full flex">
+      <div class="mr-2">
+        <label class="block text-gray-700 text-sm font-bold mb-2" for="nombre">
+          Nombre
+        </label>
+        <input placeholder="Nombre" name="nombre" id="nombre"
+               class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+               type="text">
+      </div>
+      <div>
+        <label class="block text-gray-700 text-sm font-bold mb-2" for="apellidos">
+          Apellidos
+        </label>
+        <input placeholder="Apellidos" name="apellidos" id="apellidos"
+               class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+               type="text">
+      </div>
+    </div>
+    <div class="w-full flex mt-5">
+      <div class="mr-2">
+        <label class="block text-gray-700 text-sm font-bold mb-2" for="contrasena">
+          Contraseña Nueva
+        </label>
+        <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"
+               id="contrasena" name="contrasena" type="password" placeholder="******************">
+      </div>
+      <div>
+        <label class="block text-gray-700 text-sm font-bold mb-2" for="dni">
+          DNI
+        </label>
+        <input placeholder="DNI" id="dni" name="dni"
+               class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+               type="text">
+      </div>
+    </div>
+    <div id="errores"></div>
+
+    <div class="my-5" id="direccion_contenedor"></div>
+
+
+    <div>
+      <button class="bg-green-500 mt-5 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+              type="submit">
+        Guardar Cambios
+      </button>
+    </div>
+  </form>
+</div>
+<div class="menu" id="menu">
+  <div onclick="getUserType() === 'conductor' ? window.location.href = './map_conductor.html' : './map.html'"
+       class="iconContainer"><img src="images/home.gif"/></div>
+  <div class="iconContainer" onclick="window.location.href = './editarPerfil.html'"><img src="images/profile.gif"/>
+  </div>
+  <div class="iconContainer" onclick="window.location.href = './contacto.html'"><img src="images/contact.gif"/></div>
+</div>
+
+
+<script>
+  async function cargar(){
+		const rawResponse = await fetch(`${baseURL}/${getUserType()}`, {
+			method: 'GET',
+			headers: {
+				'Accept': 'application/json',
+				'Authorization': "Bearer " + getToken()
+			}
+		});
+		const content = await rawResponse.json();
+
+		let d = content.data;
+		document.querySelector('#nombre').value = d.nombre;
+		document.querySelector('#apellidos').value = d.apellidos;
+		document.querySelector('#dni').value = d.dni;
+
+
+  }
+
+	cargar();
+</script>
+
+</body>
+</html>

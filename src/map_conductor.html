@@ -48,17 +48,17 @@
 </div>
 <div class="abajoModal" id="terminarViaje" style="height: 100px">
   <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold mr-5 py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-          type="button" onclick="recogerCliente()">
-    El cliente ha llegado a su destino
+          type="button" onclick="terminarViaje()">
+    El cliente ha pagado y a llegado a su destino
   </button>
 </div>
 
 <div class="centroModal" id="infoText" style="height: 150px">Esperando al conductor...</div>
 
-<div class="menu">
-  <div class="iconContainer"><img src="images/home.gif"/></div>
-  <div class="iconContainer"><img src="images/profile.gif"/></div>
-  <div class="iconContainer"><img src="images/contact.gif"/></div>
+<div class="menu" id="menu">
+  <div onclick="getUserType() === 'conductor' ? window.location.href = './map_conductor.html' : './map.html'" class="iconContainer"><img src="images/home.gif"/></div>
+  <div class="iconContainer" onclick="window.location.href = './editarPerfil.html'"><img src="images/profile.gif"/></div>
+  <div class="iconContainer" onclick="window.location.href = './contacto.html'"><img src="images/contact.gif"/></div>
 </div>
 
 
@@ -79,14 +79,60 @@
 	let comprobarViajeInterval = false;
 	let mostrarCocheInterval = false;
 
+
+	async function terminarViaje(){
+		const rawResponse = await fetch(`${baseURL}/viaje/terminar`, {
+			method: 'PUT',
+			headers: {
+				'Accept': 'application/json',
+				'Content-Type': 'application/json',
+				'Authorization': "Bearer " + getToken()
+			},
+			body: JSON.stringify({
+				id_viaje: viaje?.id_viaje
+			})
+		});
+		const content = await rawResponse.json();
+
+		if(content.success){
+			alert('Gracias por usar EasyDrive');
+			window.location.reload();
+    }
+
+  }
+
 	async function recogerCliente() {
+		const rawResponse = await fetch(`${baseURL}/viaje/empezar`, {
+			method: 'PUT',
+			headers: {
+				'Accept': 'application/json',
+				'Content-Type': 'application/json',
+				'Authorization': "Bearer " + getToken()
+			},
+			body: JSON.stringify({
+				id_viaje: viaje?.id_viaje
+			})
+		});
+		const content = await rawResponse.json();
+
+		if(content.success){
+			origen = destino;
+			destino = viaje.ruta.coordinates[viaje.ruta.coordinates.length - 1];
+
+
+			pintarRuta(viaje.ruta, origen, destino);
+			comprobarZoom();
+
+			origenMarker.setLngLat(destino);
+
+
+			document.querySelector('#terminarViaje').style.display = 'block';
+		}
 
 	}
 
 	async function comprobarViaje() {
 		let datos = await getCliente();
-
-		console.log(datos);
 
 
 		if (datos.cliente) {
@@ -102,18 +148,30 @@
 				price: datos.precio
 			}
 
-			origen = datos.coordenadas[0];
-			destino = datos.coordenadas[datos.coordenadas.length - 1];
 
-			origen = [origen.x, origen.y];
-			destino = [destino.x, destino.y];
+
+			origen = viaje.ruta.coordinates[0];
+			destino = viaje.ruta.coordinates[viaje.ruta.coordinates.length - 1];
+			pintarRuta(viaje.ruta, origen, destino);
+			comprobarZoom();
+
+			/*
+            origen = [origen.x, origen.y];
+            destino = [destino.x, destino.y];
+      */
 
 
 			// empezar viaje
-			mostrarInfoViaje(datos.cliente);
+			ocultarModales();
+			if(!datos.cliente.aceptado){
+				mostrarInfoViaje(datos.cliente);
+			}else if(!datos.cliente.empezado){
+				await viajeAceptado();
+      }
 
-			pintarRuta(viaje.ruta, origen, destino);
-			comprobarZoom();
+
+
+
 		}
 
 	}
@@ -122,8 +180,7 @@
 		document.querySelector('#infoViaje').style.display = 'none';
 		document.querySelector('#infoText').style.display = 'none';
 		document.querySelector('#recogerCliente').style.display = 'none';
-
-
+		document.querySelector('#terminarViaje').style.display = 'none';
 	}
 
 	async function aceptarViaje() {
@@ -142,22 +199,27 @@
 
 
 		if (content.success) {
-
-			let location = await getLocation();
-			destino = origen;
-			origen = [location.coords.longitude, location.coords.latitude]
-
-			let respuestaRuta = await getAddresses(origen, destino);
-			pintarRuta(respuestaRuta.geometry);
-
-			ocultarModales();
-			document.querySelector('#recogerCliente').style.display = 'block';
-			if (destinoMarker) destinoMarker.remove();
+      await viajeAceptado();
 
 			//if(comprobarViajeInterval)clearInterval(comprobarViajeInterval);
 			//comprobarViajeInterval = setInterval(comprobarViaje, 1000);
 		}
 	}
+
+	async function viajeAceptado(){
+		let location = await getLocation();
+		destino = origen;
+		origen = [location.coords.longitude, location.coords.latitude]
+
+		let respuestaRuta = await getAddresses(origen, destino);
+		pintarRuta(respuestaRuta.geometry);
+		comprobarZoom();
+
+		ocultarModales();
+		document.querySelector('#recogerCliente').style.display = 'block';
+		if (destinoMarker) destinoMarker.remove();
+  }
+
 
 	async function cancelarViaje() {
 		origen = false;
@@ -229,6 +291,21 @@
 		let center = [location.coords.longitude, location.coords.latitude];
 
 
+		await fetch(`${baseURL}/conductor/ubicacion`, {
+			method: 'PUT',
+			headers: {
+				'Accept': 'application/json',
+				'Content-Type': 'application/json',
+				'Authorization':"Bearer " + getToken()
+			},
+			body: JSON.stringify({
+				ubicacion: {
+					lat: location.coords.latitude,
+					lng: location.coords.longitude
+				}
+			})
+		});
+
 		if (!cocheMarker) {
 			const el = document.createElement('div');
 			el.className = 'image';
@@ -283,5 +360,7 @@
 
 
 </script>
+<script src="js/generarMenu.js"></script>
+
 </body>
 </html>

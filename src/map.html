@@ -35,7 +35,7 @@
     </button>
 
     <button class="bg-red-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-            type="button" onclick="cancelarViaje()">
+            type="button" onclick="restablecer()">
       Cancelar
     </button>
   </div>
@@ -43,20 +43,20 @@
 
 <div class="centroModal" id="infoText" style="height: 150px">Esperando al conductor...</div>
 
-<div class="menu">
-  <div class="iconContainer"><img src="images/home.gif"/></div>
-  <div class="iconContainer"><img src="images/profile.gif"/></div>
-  <div class="iconContainer"><img src="images/contact.gif"/></div>
+<div class="menu" id="menu">
+  <div onclick="getUserType() === 'conductor' ? window.location.href = './map_conductor.html' : './map.html'" class="iconContainer"><img src="images/home.gif"/></div>
+  <div class="iconContainer" onclick="window.location.href = './editarPerfil.html'"><img src="images/profile.gif"/></div>
+  <div class="iconContainer" onclick="window.location.href = './contacto.html'"><img src="images/contact.gif"/></div>
 </div>
 
 
 
 <script>
-	var origen = [-3.64884, 40.395499];
-	var destino = [-3.641673, 40.392761];
+	//var origen = [-3.64884, 40.395499];
+	//var destino = [-3.641673, 40.392761];
 	let id_viaje = false;
-  //let origen = false;
-	//let destino = false;
+  let origen = false;
+	let destino = false;
 
 
   let conductor = false;
@@ -65,7 +65,37 @@
 	let cochesMarkers = [];
 	let coordenadasRuta = [];
 
+	let estado = '';
+
 	let comprobarViajeAceptadoInterval = false;
+	let comprobarUbicacionConductorInterval = false;
+  let cargarCochesInterval = false;
+
+
+	async function recargarUbicacionConductor(){
+		const rawResponse = await fetch(`${baseURL}/viaje/coche?id_viaje=` + id_viaje, {
+			method: 'GET',
+			headers: {
+				'Accept': 'application/json',
+				'Authorization':"Bearer " + getToken()
+			}
+		});
+		const content = await rawResponse.json();
+		console.log(content);
+		if(conductor.coordenadas.x !== content.coordenadas.x || conductor.coordenadas.y !== content.coordenadas.y){
+			conductor.coordenadas = content.coordenadas;
+			let from = [conductor.coordenadas.y, conductor.coordenadas.x];
+			let to = origen;
+
+			console.log(from);
+			console.log(to);
+
+
+			await crearRuta(from, to);
+			centrarEntreDosPuntos(from, to);
+    }
+
+  }
 
 	async function comprobarViajeAceptado(){
 		const rawResponse = await fetch(`${baseURL}/viaje?id_viaje=${id_viaje}`, {
@@ -85,20 +115,36 @@
 			onNuevaDreccion();
     }
 
-		if(content?.viaje?.aceptado){
-			clearInterval(comprobarViajeAceptadoInterval);
-			alert('viaje aceptado');
-			let ubicacionActual = await getLocation();
+		if(content?.viaje?.aceptado) {
+			if (content?.viaje?.finalizado) {
+				alert('Gracias por confiar en EasyDrive!');
+				window.location.reload();
+			}else if(content?.viaje?.empezado && estado !== 'empezado'){
+				estado = 'empezado';
+				await crearRuta();
+				centrarEntreDosPuntos(origen, destino);
+				document.querySelector('#infoText').innerText = 'Esta de camino a su destino!';
+		  }else if(estado !== 'esperando conductor' && estado !== 'empezado'){
+				estado = 'esperando conductor';
+				//clearInterval(comprobarViajeAceptadoInterval);
+				let ubicacionActual = await getLocation();
 
-			console.log(ubicacionActual);
 
-			let from = [ubicacionActual.coords.longitude, ubicacionActual.coords.latitude];
-			let to = [conductor.coordenadas.x, conductor.coordenadas.y];
-			await crearRuta(from, to);
-      centrarEntreDosPuntos(from, to);
-			document.querySelector('#infoText').innerText = 'Esperando la llegada del conductor';
+				let from = [ubicacionActual.coords.longitude, ubicacionActual.coords.latitude];
+				let to = [conductor.coordenadas.y, conductor.coordenadas.x];
 
-			// empezar viaje
+				console.log(from);
+				console.log(to);
+
+
+				await crearRuta(from, to);
+				centrarEntreDosPuntos(from, to);
+				document.querySelector('#infoText').innerText = 'Esperando la llegada del conductor';
+
+				comprobarUbicacionConductorInterval = setInterval(recargarUbicacionConductor, 1000);
+
+				// empezar viaje
+			}
     }
 
   }
@@ -133,7 +179,7 @@
     }
   }
 
-	function cancelarViaje(){
+	function restablecer(){
 		origen = false;
 		destino = false;
 
@@ -153,7 +199,6 @@
 		if (!a || !b) return;
 		let respuestaRuta = await getAddresses(a, b);
 
-		console.log(respuestaRuta.geometry);
 		pintarRuta(respuestaRuta.geometry);
 
 		return respuestaRuta;
@@ -178,7 +223,7 @@
 
 
 	async function cargarCoches() {
-		/*
+
       const rawResponse = await fetch(`${baseURL}/conductor/ubicacion`, {
         method: 'GET',
         headers: {
@@ -187,13 +232,18 @@
         }
       });
       const content = await rawResponse.json();
-    */
 
+/*
 		let coordenadas = [
 			[40.386255, -3.646221],
 			[40.397369, -3.641411],
 			[40.393675, -3.660512]
-		];
+		];*/
+
+    let coordenadas = content.map(a => ([a.coordenadas.x, a.coordenadas.y]));
+
+		cochesMarkers.forEach(marker => marker.remove());
+		cochesMarkers = [];
 
 		for (let i = 0; i < coordenadas.length; i++) {
 			let center = [coordenadas[i][1], coordenadas[i][0]];
@@ -261,7 +311,7 @@
 		});
 
 
-		mapboxgl.accessToken = 'pk.eyJ1IjoibHl1Ym9zZCIsImEiOiJjbDJkaHZhdGQwOGtpM2xtYjJvem13eW16In0.MGGU6F3qmuLK2TSqfShavQ';
+		mapboxgl.accessToken = mapboxAccessToken;
 		map = new mapboxgl.Map({
 			container: 'map', // container ID
 			style: 'mapbox://styles/mapbox/navigation-day-v1', // style URL
@@ -280,7 +330,8 @@
 		map.addControl(geolocate);
 		map.on('load', () => {
 			//geolocate.trigger();
-			cargarCoches();
+			cargarCochesInterval = setInterval(cargarCoches, 1000);
+			//cargarCoches();
 			onNuevaDreccion();
 		});
 

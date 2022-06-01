@@ -2,8 +2,16 @@ mapboxAccessToken = 'pk.eyJ1IjoibHl1Ym9zZCIsImEiOiJjbDJkaHZhdGQwOGtpM2xtYjJvem13
 
 async function getLocation() {
 	return new Promise((resolve, reject) => {
+		return resolve({
+			coords: {
+				latitude: 40.4172,
+				longitude: -3.684
+			}
+		});
+
 		if (navigator.geolocation) {
-			return navigator.geolocation.getCurrentPosition(data => {
+			return navigator.geolocation.watchPosition(data => {
+				console.log(data);
 				resolve(data);
 			});
 		} else {
@@ -12,13 +20,13 @@ async function getLocation() {
 	});
 }
 
-async function getAddresses(origen, destino){
+async function getAddresses(origen, destino) {
 	let data = {
 		from: {
 			lat: origen[1],
 			lng: origen[0]
 		},
-		to:{
+		to: {
 			lat: destino[1],
 			lng: destino[0]
 		}
@@ -29,7 +37,7 @@ async function getAddresses(origen, destino){
 		headers: {
 			'Accept': 'application/json',
 			'Content-Type': 'application/json',
-			'Authorization':"Bearer " + getToken()
+			'Authorization': "Bearer " + getToken()
 		},
 		body: JSON.stringify(data)
 	});
@@ -42,17 +50,19 @@ function centrarEntreDosPuntos(a, b) {
 	let bounds = new mapboxgl.LngLatBounds(a, b);
 	map.fitBounds(bounds, {padding: 50});
 }
+
 async function comprobarZoom() {
 	if (origen && destino) return centrarEntreDosPuntos(origen, destino);
 	if (origen || destino) map.setCenter(origen || destino);
 }
 
-function pintarRuta(geometry, origen, destino){
+function pintarRuta(geometry, origen, destino) {
 	console.log(geometry);
 	try {
 		map.removeLayer('LineString');
 		map.removeSource('LineString');
-	}catch(_){}
+	} catch (_) {
+	}
 
 	map.addSource('LineString', {
 		type: 'geojson',
@@ -82,7 +92,7 @@ function pintarRuta(geometry, origen, destino){
 		}
 	});
 
-	if(origen){
+	if (origen) {
 		if (!origenMarker) {
 			origenMarker = new mapboxgl.Marker();
 			origenMarker.setLngLat(origen);
@@ -92,7 +102,7 @@ function pintarRuta(geometry, origen, destino){
 		}
 	}
 
-	if(destino){
+	if (destino) {
 		if (!destinoMarker) {
 			destinoMarker = new mapboxgl.Marker();
 			destinoMarker.setLngLat(destino);
@@ -105,12 +115,12 @@ function pintarRuta(geometry, origen, destino){
 }
 
 
-async function getConductor(){
+async function getConductor() {
 	const rawResponse = await fetch(`${baseURL}/viaje/conductor`, {
 		method: 'GET',
 		headers: {
 			'Accept': 'application/json',
-			'Authorization':"Bearer " + getToken()
+			'Authorization': "Bearer " + getToken()
 		}
 	});
 	const content = await rawResponse.json();
@@ -118,15 +128,14 @@ async function getConductor(){
 	return content.conductor;
 }
 
-async function getCliente(){
+async function getCliente() {
 	const rawResponse = await fetch(`${baseURL}/viaje/cliente`, {
 		method: 'GET',
 		headers: {
 			'Accept': 'application/json',
-			'Authorization':"Bearer " + getToken()
+			'Authorization': "Bearer " + getToken()
 		}
 	});
 	const content = await rawResponse.json();
-	console.log(content);
 	return content;
 }

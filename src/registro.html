@@ -39,6 +39,38 @@
 			var data = {};
 			formData.forEach((value, key) => data[key] = value);
 
+          if(data.nombre.length < 2 || !/^[a-zA-Z ]+$/.test( data.nombre)){
+            errorDiv.innerHTML = 'El nom bre es invalido!'
+            return;
+          }
+
+          if(data.apellidos.length < 2 || !/^[a-zA-Z ]+$/.test( data.apellidos)){
+            errorDiv.innerHTML = 'El apellido es invalido!'
+            return;
+          }
+
+          if(data.contrasena.length > 0 && !(/^(?=.*[a-z])(?=.*[0-9])\S{8,30}$/i).test(data.contrasena)){ // por lo menos 8 caracteres, 1 letra y 1 numero obligatorios
+            errorDiv.innerHTML = 'La contraseña debe incluir por lo menos 8 caracteres, 1 letra y 1 numero! '
+            return;
+          }
+          if(data.dni.length !== 9 ){
+            errorDiv.innerHTML = 'El DNI es inccorecto!'
+            return;
+
+          }
+          if(!/^(([^<>()\[\]\.,;:\s@\"]+(\.[^<>()\[\]\.,;:\s@\"]+)*)|(\".+\"))@(([^<>()[\]\.,;:\s@\"]+\.)+[^<>()[\]\.,;:\s@\"]{2,})$/i.test( data.email)){
+            errorDiv.innerHTML = 'El email es invalido!'
+            return;
+          }
+          if(data.telefono.length !== 9 ){
+            errorDiv.innerHTML = 'El número de telefonó es inccorecto!'
+            return;
+          }
+          if(data.num_carnet.length !== 9 ){
+            errorDiv.innerHTML = 'El número de carnet es inccorecto!'
+            return;
+          }
+
 			let url = `${baseURL}/`;
 			if (data.type === 'conductor') {
 				url += 'conductor_registro';
@@ -48,6 +80,11 @@
 
 			data.telefono = '(+34)' + data.telefono;
 			data.dni = data.dni.toUpperCase();
+
+			if (!data.dirrecion){
+              errorDiv.innerHTML = 'El campo de dirección esta vacio'
+              return;
+            }
 
 			data.direccion = {
 				address: direccion.texto,
@@ -143,7 +180,7 @@
       </label>
       <input
               class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              id="telefono" name="telefono" type="text" placeholder="666666666">
+              id="telefono" name="telefono" type="number" placeholder="666666666">
     </div>
 
 
